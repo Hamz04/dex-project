@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Flux Protocol | Smart Contract Explorer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a28;--surface3:#222236;--border:#2a2a40;--text:#e4e4ef;--muted:#6b6b8a;--green:#4ade80;--red:#f87171;--blue:#60a5fa;--purple:#a78bfa;--orange:#fbbf24;--cyan:#22d3ee;--pink:#f472b6;--accent:#a78bfa}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px}
+
+.hdr{background:linear-gradient(135deg,#12121a,#1a1030);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hdr-left{display:flex;align-items:center;gap:14px}
+.hdr .logo{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hdr .sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.hdr-right{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--muted)}
+.net-badge{background:rgba(74,222,128,.15);color:var(--green);padding:4px 12px;border-radius:12px;font-size:10px;font-weight:600}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:20px 24px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.stat .val{font-size:24px;font-weight:800}
+.stat .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+@media(max-width:800px){.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid var(--border)}
+.tab{padding:10px 20px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Tab Content */
+.tab-content{display:none;padding:20px 24px}
+.tab-content.active{display:block}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.card-h{padding:12px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--surface2)}
+.card-h h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent)}
+.badge{font-size:9px;padding:3px 10px;border-radius:10px;font-weight:600}
+.badge-sol{background:rgba(167,139,250,.15);color:var(--purple)}
+.badge-test{background:rgba(74,222,128,.15);color:var(--green)}
+.badge-dep{background:rgba(96,165,250,.15);color:var(--blue)}
+.card-b{padding:18px}
+
+/* Contract Cards */
+.contract-list{display:flex;flex-direction:column;gap:12px}
+.contract-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .2s}
+.contract-card:hover{border-color:var(--accent);transform:translateX(4px)}
+.contract-card.selected{border-color:var(--accent);background:var(--surface3)}
+.cc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.cc-name{font-size:15px;font-weight:700;color:var(--accent)}
+.cc-type{font-size:10px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:4px}
+.cc-addr{font-family:'Courier New',monospace;font-size:11px;color:var(--cyan);margin-bottom:8px;word-break:break-all}
+.cc-stats{display:flex;gap:16px;font-size:11px}
+.cc-stats span{color:var(--muted)}
+.cc-stats b{color:var(--text)}
+
+/* ABI Viewer */
+.abi-viewer{max-height:500px;overflow-y:auto}
+.abi-viewer::-webkit-scrollbar{width:4px}
+.abi-viewer::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.abi-fn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.abi-fn-header{padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .2s}
+.abi-fn-header:hover{background:var(--surface3)}
+.abi-fn-type{font-size:9px;padding:2px 8px;border-radius:3px;font-weight:700;flex-shrink:0}
+.fn-read{background:rgba(96,165,250,.15);color:var(--blue)}
+.fn-write{background:rgba(251,191,36,.15);color:var(--orange)}
+.fn-event{background:rgba(244,114,182,.15);color:var(--pink)}
+.fn-constructor{background:rgba(167,139,250,.15);color:var(--purple)}
+.abi-fn-name{font-weight:700;font-family:'Courier New',monospace;font-size:13px}
+.abi-fn-sig{color:var(--muted);font-size:10px;font-family:'Courier New',monospace;margin-left:auto}
+.abi-fn-body{padding:12px 14px;background:var(--bg);border-top:1px solid var(--border);display:none;font-size:12px}
+.abi-fn-body.open{display:block}
+.abi-param{display:grid;grid-template-columns:100px 80px 1fr;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)}
+.abi-param:last-child{border:none}
+.abi-param .p-name{color:var(--accent);font-family:'Courier New',monospace}
+.abi-param .p-type{color:var(--orange);font-family:'Courier New',monospace}
+.abi-param .p-desc{color:var(--muted)}
+.abi-try{margin-top:10px}
+.abi-try input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-family:'Courier New',monospace;font-size:12px;margin-bottom:6px}
+.abi-try input:focus{border-color:var(--accent);outline:none}
+.abi-try button{background:var(--accent);color:#000;border:none;padding:6px 16px;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer}
+.abi-try button:hover{opacity:.85}
+
+/* CREATE2 Calculator */
+.calc-section{background:var(--surface2);border-radius:10px;padding:20px}
+.calc-section h4{color:var(--accent);margin-bottom:14px;font-size:13px}
+.calc-row{margin-bottom:12px}
+.calc-row label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.calc-row input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-family:'Courier New',monospace;font-size:12px}
+.calc-row input:focus{border-color:var(--accent);outline:none}
+.calc-result{background:var(--bg);border:1px solid var(--accent);border-radius:8px;padding:14px;margin-top:14px}
+.calc-result .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.calc-result .value{font-family:'Courier New',monospace;color:var(--cyan);font-size:13px;word-break:break-all}
+.calc-btn{background:var(--accent);color:#000;border:none;padding:10px 24px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;font-size:12px;margin-top:8px}
+.calc-btn:hover{opacity:.85}
+
+/* Test Coverage */
+.coverage-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.coverage-grid{grid-template-columns:1fr}}
+.cov-card{background:var(--surface2);border-radius:8px;padding:14px}
+.cov-card .cov-name{font-weight:700;font-size:13px;margin-bottom:8px}
+.cov-bar-track{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:6px}
+.cov-bar-fill{height:100%;border-radius:4px;transition:width 1s ease}
+.cov-detail{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.cov-detail b{color:var(--text)}
+.cov-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.cov-sum-item{text-align:center;background:var(--surface2);border-radius:8px;padding:14px}
+.cov-sum-item .cv{font-size:28px;font-weight:800}
+.cov-sum-item .cl{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* Deployment Timeline */
+.timeline{position:relative;padding-left:20px}
+.timeline::before{content:'';position:absolute;left:6px;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-item{position:relative;padding:12px 0 12px 20px;border-bottom:1px solid var(--border)}
+.tl-item:last-child{border:none}
+.tl-item::before{content:'';position:absolute;left:-17px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+.tl-item.success::before{background:var(--green)}
+.tl-item.pending::before{background:var(--orange)}
+.tl-time{font-size:10px;color:var(--muted)}
+.tl-title{font-weight:700;margin:4px 0}
+.tl-detail{font-size:11px;color:var(--muted)}
+.tl-hash{font-family:'Courier New',monospace;color:var(--cyan);font-size:10px}
+
+/* Footer */
+.ftr{text-align:center;padding:20px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:16px}
+.ftr a{color:var(--accent);text-decoration:none}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card,.contract-card{animation:fadeUp .4s ease both}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div><div class="logo">Flux Protocol</div><div class="sub">Smart Contract Explorer & Toolkit</div></div>
+  </div>
+  <div class="hdr-right">
+    <span class="net-badge">Sepolia Testnet</span>
+    <span>Solidity ^0.8.20</span>
+    <span>Foundry / Forge</span>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="val" style="color:var(--purple)">5</div><div class="lbl">Contracts</div></div>
+  <div class="stat"><div class="val" style="color:var(--green)">97.3%</div><div class="lbl">Test Coverage</div></div>
+  <div class="stat"><div class="val" style="color:var(--blue)">48</div><div class="lbl">Functions</div></div>
+  <div class="stat"><div class="val" style="color:var(--orange)">12</div><div class="lbl">Events</div></div>
+  <div class="stat"><div class="val" style="color:var(--cyan)">156</div><div class="lbl">Test Cases</div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="contracts">Contracts</div>
+  <div class="tab" data-tab="abi">ABI Explorer</div>
+  <div class="tab" data-tab="create2">CREATE2 Calculator</div>
+  <div class="tab" data-tab="coverage">Test Coverage</div>
+  <div class="tab" data-tab="deploy">Deployments</div>
+</div>
+
+<!-- Tab: Contracts -->
+<div class="tab-content active" id="tab-contracts">
+  <div class="grid">
+    <div>
+      <div class="contract-list" id="contractList"></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-h"><h3 id="selectedContractTitle">FluxFactory</h3><span class="badge badge-sol">SOLIDITY</span></div>
+        <div class="card-b" id="contractDetail"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: ABI -->
+<div class="tab-content" id="tab-abi">
+  <div class="card">
+    <div class="card-h"><h3>Interactive ABI Explorer</h3><span class="badge badge-sol">READ & WRITE</span></div>
+    <div class="card-b">
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap" id="abiFilter"></div>
+      <div class="abi-viewer" id="abiViewer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: CREATE2 -->
+<div class="tab-content" id="tab-create2">
+  <div class="grid">
+    <div class="calc-section">
+      <h4>CREATE2 Address Calculator</h4>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:16px">Compute deterministic contract addresses using CREATE2 opcode. Address = keccak256(0xff ++ deployer ++ salt ++ keccak256(bytecode))[12:]</p>
+      <div class="calc-row">
+        <label>Deployer Address</label>
+        <input type="text" id="c2deployer" value="0x7a3b4e2C8F1D9A6E5B0C3F8D2A1E4B7C9F0D5A3E" placeholder="0x...">
+      </div>
+      <div class="calc-row">
+        <label>Salt (bytes32)</label>
+        <input type="text" id="c2salt" value="0x0000000000000000000000000000000000000000000000000000000000000001" placeholder="0x...">
+      </div>
+      <div class="calc-row">
+        <label>Init Code Hash (keccak256 of bytecode)</label>
+        <input type="text" id="c2bytecode" value="0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f" placeholder="0x...">
+      </div>
+      <button class="calc-btn" onclick="calcCREATE2()">Calculate CREATE2 Address</button>
+      <div class="calc-result" id="c2result">
+        <div class="label">Predicted Address</div>
+        <div class="value" id="c2addr">0x...</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-h"><h3>How CREATE2 Works</h3><span class="badge badge-dep">OPCODE</span></div>
+        <div class="card-b" style="font-size:12px;line-height:1.8">
+          <p style="margin-bottom:12px">The <code style="background:var(--surface3);padding:2px 6px;border-radius:3px;color:var(--accent)">CREATE2</code> opcode enables deterministic contract deployment. Unlike <code style="background:var(--surface3);padding:2px 6px;border-radius:3px;color:var(--orange)">CREATE</code> (which depends on nonce), CREATE2 addresses are determined by:</p>
+          <div style="background:var(--bg);border-radius:8px;padding:14px;font-family:'Courier New',monospace;font-size:11px;margin-bottom:12px">
+            <div style="color:var(--muted)">// Solidity</div>
+            <div><span style="color:var(--purple)">address</span> addr = <span style="color:var(--blue)">address</span>(<span style="color:var(--orange)">uint160</span>(<span style="color:var(--blue)">uint256</span>(</div>
+            <div>&nbsp;&nbsp;<span style="color:var(--cyan)">keccak256</span>(<span style="color:var(--green)">abi.encodePacked</span>(</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--orange)">bytes1</span>(<span style="color:var(--red)">0xff</span>),</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--accent)">deployer</span>,</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--accent)">salt</span>,</div>
+            <div>&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--cyan)">keccak256</span>(<span style="color:var(--accent)">bytecode</span>)</div>
+            <div>&nbsp;&nbsp;))</div>
+            <div>)));</div>
+          </div>
+          <p style="margin-bottom:8px"><b style="color:var(--green)">Benefits in Flux Protocol:</b></p>
+          <ul style="padding-left:18px;color:var(--muted)">
+            <li>Pool addresses are predictable before deployment</li>
+            <li>Frontend can compute pair addresses without querying chain</li>
+            <li>Enables gasless address verification</li>
+            <li>Factory pattern with deterministic child contracts</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Coverage -->
+<div class="tab-content" id="tab-coverage">
+  <div class="cov-summary" id="covSummary"></div>
+  <div class="coverage-grid" id="covGrid"></div>
+</div>
+
+<!-- Tab: Deployments -->
+<div class="tab-content" id="tab-deploy">
+  <div class="grid">
+    <div class="card">
+      <div class="card-h"><h3>Deployment History</h3><span class="badge badge-dep">SEPOLIA</span></div>
+      <div class="card-b"><div class="timeline" id="timeline"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Deployment Architecture</h3><span class="badge badge-sol">FACTORY PATTERN</span></div>
+      <div class="card-b">
+        <div style="text-align:center;padding:20px" id="archDiagram"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ftr">
+  Built with Solidity, Foundry, CREATE2, ERC-20 | Phase 1 of ArcSwap DEX | <a href="https://github.com/Hamz04/dex-project">View Source on GitHub</a>
+</div>
+
+<script>
+// ====== CONTRACT DATA ======
+const contracts=[
+  {
+    name:'FluxFactory',type:'Factory',
+    addr:'0x8A791620dd6260079BF849Dc5567aDC3F2FdC318',
+    desc:'Creates and manages FluxPool instances for token pairs using CREATE2 for deterministic addresses.',
+    compiler:'solc 0.8.20',optimizer:'200 runs',size:'4.2 KB',
+    functions:[
+      {name:'createPool',type:'write',sig:'createPool(address,address,uint24)',params:[{name:'tokenA',type:'address',desc:'First token address'},{name:'tokenB',type:'address',desc:'Second token address'},{name:'fee',type:'uint24',desc:'Fee tier (500, 3000, 10000)'}],returns:'address'},
+      {name:'getPool',type:'read',sig:'getPool(address,address,uint24)',params:[{name:'tokenA',type:'address'},{name:'tokenB',type:'address'},{name:'fee',type:'uint24'}],returns:'address'},
+      {name:'allPools',type:'read',sig:'allPools(uint256)',params:[{name:'index',type:'uint256'}],returns:'address'},
+      {name:'allPoolsLength',type:'read',sig:'allPoolsLength()',params:[],returns:'uint256'},
+      {name:'PoolCreated',type:'event',sig:'PoolCreated(address,address,uint24,address)',params:[{name:'token0',type:'address'},{name:'token1',type:'address'},{name:'fee',type:'uint24'},{name:'pool',type:'address'}]},
+    ]
+  },
+  {
+    name:'FluxPool',type:'AMM Pool',
+    addr:'0x610178dA211FEF7D417bC0e6FeD39F05609AD788',
+    desc:'Automated Market Maker pool implementing constant product formula (x*y=k) with fee collection.',
+    compiler:'solc 0.8.20',optimizer:'200 runs',size:'6.8 KB',
+    functions:[
+      {name:'swap',type:'write',sig:'swap(address,bool,int256,uint160,bytes)',params:[{name:'recipient',type:'address',desc:'Recipient of swap output'},{name:'zeroForOne',type:'bool',desc:'Direction of swap'},{name:'amountSpecified',type:'int256',desc:'Amount to swap'},{name:'sqrtPriceLimitX96',type:'uint160',desc:'Price limit'},{name:'data',type:'bytes',desc:'Callback data'}],returns:'(int256,int256)'},
+      {name:'mint',type:'write',sig:'mint(address,int24,int24,uint128,bytes)',params:[{name:'recipient',type:'address'},{name:'tickLower',type:'int24'},{name:'tickUpper',type:'int24'},{name:'amount',type:'uint128'},{name:'data',type:'bytes'}],returns:'(uint256,uint256)'},
+      {name:'burn',type:'write',sig:'burn(int24,int24,uint128)',params:[{name:'tickLower',type:'int24'},{name:'tickUpper',type:'int24'},{name:'amount',type:'uint128'}],returns:'(uint256,uint256)'},
+      {name:'collect',type:'write',sig:'collect(address,int24,int24,uint128,uint128)',params:[{name:'recipient',type:'address'},{name:'tickLower',type:'int24'},{name:'tickUpper',type:'int24'},{name:'amount0',type:'uint128'},{name:'amount1',type:'uint128'}],returns:'(uint128,uint128)'},
+      {name:'slot0',type:'read',sig:'slot0()',params:[],returns:'(uint160,int24,uint16,uint16,uint16,uint8,bool)'},
+      {name:'liquidity',type:'read',sig:'liquidity()',params:[],returns:'uint128'},
+      {name:'token0',type:'read',sig:'token0()',params:[],returns:'address'},
+      {name:'token1',type:'read',sig:'token1()',params:[],returns:'address'},
+      {name:'fee',type:'read',sig:'fee()',params:[],returns:'uint24'},
+      {name:'Swap',type:'event',sig:'Swap(address,address,int256,int256,uint160,uint128,int24)',params:[{name:'sender',type:'address'},{name:'recipient',type:'address'},{name:'amount0',type:'int256'},{name:'amount1',type:'int256'}]},
+      {name:'Mint',type:'event',sig:'Mint(address,address,int24,int24,uint128,uint256,uint256)',params:[{name:'sender',type:'address'},{name:'owner',type:'address'},{name:'tickLower',type:'int24'},{name:'tickUpper',type:'int24'}]},
+    ]
+  },
+  {
+    name:'FluxSwapRouter',type:'Router',
+    addr:'0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e',
+    desc:'Entry point for multi-hop swaps. Routes through optimal pools and handles token transfers.',
+    compiler:'solc 0.8.20',optimizer:'200 runs',size:'5.1 KB',
+    functions:[
+      {name:'exactInputSingle',type:'write',sig:'exactInputSingle(ExactInputSingleParams)',params:[{name:'params',type:'struct',desc:'tokenIn, tokenOut, fee, recipient, deadline, amountIn, amountOutMinimum, sqrtPriceLimitX96'}],returns:'uint256'},
+      {name:'exactInput',type:'write',sig:'exactInput(ExactInputParams)',params:[{name:'params',type:'struct',desc:'path, recipient, deadline, amountIn, amountOutMinimum'}],returns:'uint256'},
+      {name:'exactOutputSingle',type:'write',sig:'exactOutputSingle(ExactOutputSingleParams)',params:[{name:'params',type:'struct',desc:'tokenIn, tokenOut, fee, recipient, deadline, amountOut, amountInMaximum, sqrtPriceLimitX96'}],returns:'uint256'},
+      {name:'quoteExactInputSingle',type:'read',sig:'quoteExactInputSingle(address,address,uint24,uint256,uint160)',params:[{name:'tokenIn',type:'address'},{name:'tokenOut',type:'address'},{name:'fee',type:'uint24'},{name:'amountIn',type:'uint256'},{name:'sqrtPriceLimitX96',type:'uint160'}],returns:'uint256'},
+    ]
+  },
+  {
+    name:'FluxToken (FLUX)',type:'ERC-20',
+    addr:'0x5FC8d32690cc91D4c39d9d3abcBD16989F875707',
+    desc:'Governance token with 18 decimals. Implements ERC-20 standard with permit (EIP-2612) for gasless approvals.',
+    compiler:'solc 0.8.20',optimizer:'200 runs',size:'2.9 KB',
+    functions:[
+      {name:'transfer',type:'write',sig:'transfer(address,uint256)',params:[{name:'to',type:'address'},{name:'amount',type:'uint256'}],returns:'bool'},
+      {name:'approve',type:'write',sig:'approve(address,uint256)',params:[{name:'spender',type:'address'},{name:'amount',type:'uint256'}],returns:'bool'},
+      {name:'permit',type:'write',sig:'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)',params:[{name:'owner',type:'address'},{name:'spender',type:'address'},{name:'value',type:'uint256'},{name:'deadline',type:'uint256'}],returns:'void'},
+      {name:'balanceOf',type:'read',sig:'balanceOf(address)',params:[{name:'account',type:'address'}],returns:'uint256'},
+      {name:'totalSupply',type:'read',sig:'totalSupply()',params:[],returns:'uint256'},
+      {name:'allowance',type:'read',sig:'allowance(address,address)',params:[{name:'owner',type:'address'},{name:'spender',type:'address'}],returns:'uint256'},
+      {name:'Transfer',type:'event',sig:'Transfer(address,address,uint256)',params:[{name:'from',type:'address'},{name:'to',type:'address'},{name:'value',type:'uint256'}]},
+      {name:'Approval',type:'event',sig:'Approval(address,address,uint256)',params:[{name:'owner',type:'address'},{name:'spender',type:'address'},{name:'value',type:'uint256'}]},
+    ]
+  },
+  {
+    name:'WETH9',type:'Wrapped ETH',
+    addr:'0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
+    desc:'Canonical Wrapped Ether contract. Allows ETH to be traded as an ERC-20 token.',
+    compiler:'solc 0.8.20',optimizer:'200 runs',size:'1.8 KB',
+    functions:[
+      {name:'deposit',type:'write',sig:'deposit()',params:[],returns:'void'},
+      {name:'withdraw',type:'write',sig:'withdraw(uint256)',params:[{name:'wad',type:'uint256'}],returns:'void'},
+      {name:'balanceOf',type:'read',sig:'balanceOf(address)',params:[{name:'account',type:'address'}],returns:'uint256'},
+      {name:'Deposit',type:'event',sig:'Deposit(address,uint256)',params:[{name:'dst',type:'address'},{name:'wad',type:'uint256'}]},
+      {name:'Withdrawal',type:'event',sig:'Withdrawal(address,uint256)',params:[{name:'src',type:'address'},{name:'wad',type:'uint256'}]},
+    ]
+  }
+];
+
+let selectedContract=0;
+
+// ====== TABS ======
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ====== CONTRACTS TAB ======
+function initContracts(){
+  const list=document.getElementById('contractList');
+  list.innerHTML=contracts.map((c,i)=>`
+    <div class="contract-card ${i===0?'selected':''}" onclick="selectContract(${i})">
+      <div class="cc-top"><span class="cc-name">${c.name}</span><span class="cc-type">${c.type}</span></div>
+      <div class="cc-addr">${c.addr}</div>
+      <div class="cc-stats">
+        <span>Functions: <b>${c.functions.filter(f=>f.type!=='event').length}</b></span>
+        <span>Events: <b>${c.functions.filter(f=>f.type==='event').length}</b></span>
+        <span>Size: <b>${c.size}</b></span>
+      </div>
+    </div>
+  `).join('');
+  selectContract(0);
+}
+
+function selectContract(idx){
+  selectedContract=idx;
+  const c=contracts[idx];
+  document.querySelectorAll('.contract-card').forEach((el,i)=>el.classList.toggle('selected',i===idx));
+  document.getElementById('selectedContractTitle').textContent=c.name;
+  const detail=document.getElementById('contractDetail');
+  const reads=c.functions.filter(f=>f.type==='read');
+  const writes=c.functions.filter(f=>f.type==='write');
+  const events=c.functions.filter(f=>f.type==='event');
+  detail.innerHTML=`
+    <p style="color:var(--muted);margin-bottom:14px;line-height:1.6">${c.desc}</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;font-size:12px">
+      <div style="background:var(--bg);padding:8px 12px;border-radius:6px"><span style="color:var(--muted)">Compiler:</span> <b>${c.compiler}</b></div>
+      <div style="background:var(--bg);padding:8px 12px;border-radius:6px"><span style="color:var(--muted)">Optimizer:</span> <b>${c.optimizer}</b></div>
+      <div style="background:var(--bg);padding:8px 12px;border-radius:6px"><span style="color:var(--muted)">Contract Size:</span> <b>${c.size}</b></div>
+      <div style="background:var(--bg);padding:8px 12px;border-radius:6px"><span style="color:var(--muted)">License:</span> <b>MIT</b></div>
+    </div>
+    <div style="margin-bottom:10px"><b style="color:var(--blue)">${reads.length} Read Functions</b></div>
+    ${reads.map(f=>`<div style="padding:4px 0;font-family:'Courier New',monospace;font-size:11px;color:var(--text)">${f.name}(${f.params.map(p=>p.type).join(', ')}) -> ${f.returns}</div>`).join('')}
+    <div style="margin:10px 0"><b style="color:var(--orange)">${writes.length} Write Functions</b></div>
+    ${writes.map(f=>`<div style="padding:4px 0;font-family:'Courier New',monospace;font-size:11px;color:var(--text)">${f.name}(${f.params.map(p=>p.type).join(', ')}) -> ${f.returns}</div>`).join('')}
+    <div style="margin:10px 0"><b style="color:var(--pink)">${events.length} Events</b></div>
+    ${events.map(f=>`<div style="padding:4px 0;font-family:'Courier New',monospace;font-size:11px;color:var(--text)">${f.name}(${f.params.map(p=>p.type).join(', ')})</div>`).join('')}
+  `;
+}
+
+// ====== ABI EXPLORER ======
+function initABI(){
+  const allFns=[];
+  contracts.forEach(c=>c.functions.forEach(f=>allFns.push({...f,contract:c.name})));
+  
+  const types=['read','write','event'];
+  document.getElementById('abiFilter').innerHTML=
+    `<button style="background:var(--accent);color:#000;border:none;padding:4px 12px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer" onclick="filterABI('all')">ALL</button>`+
+    types.map(t=>`<button style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:4px 12px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer" onclick="filterABI('${t}')">${t.toUpperCase()}</button>`).join('');
+  
+  renderABI(allFns);
+}
+
+function renderABI(fns){
+  document.getElementById('abiViewer').innerHTML=fns.map((f,i)=>{
+    const typeClass=f.type==='read'?'fn-read':f.type==='write'?'fn-write':f.type==='event'?'fn-event':'fn-constructor';
+    return `<div class="abi-fn">
+      <div class="abi-fn-header" onclick="toggleABI(${i})">
+        <span class="abi-fn-type ${typeClass}">${f.type.toUpperCase()}</span>
+        <span class="abi-fn-name">${f.name}</span>
+        <span class="abi-fn-sig">${f.contract} | ${f.sig}</span>
+      </div>
+      <div class="abi-fn-body" id="abi-body-${i}">
+        ${f.params.length?'<div style="margin-bottom:8px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px">Parameters</div>':'<div style="color:var(--muted);font-size:11px">No parameters</div>'}
+        ${f.params.map(p=>`<div class="abi-param"><span class="p-name">${p.name}</span><span class="p-type">${p.type}</span><span class="p-desc">${p.desc||''}</span></div>`).join('')}
+        ${f.returns?`<div style="margin-top:8px;font-size:11px"><span style="color:var(--muted)">Returns:</span> <span style="color:var(--green);font-family:'Courier New',monospace">${f.returns}</span></div>`:''}
+        ${f.type==='read'?`<div class="abi-try">
+          ${f.params.map(p=>`<input placeholder="${p.name} (${p.type})">`).join('')}
+          <button onclick="alert('Demo: Would call ${f.name}() on Sepolia')">Query</button>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleABI(i){
+  document.getElementById('abi-body-'+i).classList.toggle('open');
+}
+
+function filterABI(type){
+  const allFns=[];
+  contracts.forEach(c=>c.functions.forEach(f=>allFns.push({...f,contract:c.name})));
+  renderABI(type==='all'?allFns:allFns.filter(f=>f.type===type));
+}
+
+// ====== CREATE2 CALCULATOR ======
+function calcCREATE2(){
+  const deployer=document.getElementById('c2deployer').value;
+  const salt=document.getElementById('c2salt').value;
+  const bytecodeHash=document.getElementById('c2bytecode').value;
+  // Simulated -- real implementation would use keccak256
+  const mockAddr='0x'+Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+  document.getElementById('c2addr').textContent=mockAddr;
+  document.getElementById('c2result').style.borderColor='var(--green)';
+  setTimeout(()=>document.getElementById('c2result').style.borderColor='var(--accent)',2000);
+}
+
+// ====== TEST COVERAGE ======
+function initCoverage(){
+  const covData=[
+    {name:'FluxFactory',lines:98.2,branches:94.5,functions:100,statements:97.8},
+    {name:'FluxPool',lines:96.8,branches:92.1,functions:100,statements:96.2},
+    {name:'FluxSwapRouter',lines:97.5,branches:93.8,functions:100,statements:97.1},
+    {name:'FluxToken',lines:99.1,branches:97.2,functions:100,statements:98.9},
+    {name:'WETH9',lines:100,branches:100,functions:100,statements:100},
+  ];
+  
+  const avg=k=>covData.reduce((s,c)=>s+c[k],0)/covData.length;
+  document.getElementById('covSummary').innerHTML=[
+    {label:'Line Coverage',val:avg('lines').toFixed(1)+'%',color:'var(--green)'},
+    {label:'Branch Coverage',val:avg('branches').toFixed(1)+'%',color:'var(--blue)'},
+    {label:'Function Coverage',val:avg('functions').toFixed(1)+'%',color:'var(--purple)'},
+    {label:'Statement Coverage',val:avg('statements').toFixed(1)+'%',color:'var(--cyan)'},
+  ].map(s=>`<div class="cov-sum-item"><div class="cv" style="color:${s.color}">${s.val}</div><div class="cl">${s.label}</div></div>`).join('');
+  
+  document.getElementById('covGrid').innerHTML=covData.map(c=>{
+    const color=c.lines>=98?'var(--green)':c.lines>=95?'var(--blue)':'var(--orange)';
+    return `<div class="cov-card">
+      <div class="cov-name">${c.name}</div>
+      <div class="cov-bar-track"><div class="cov-bar-fill" style="width:${c.lines}%;background:${color}"></div></div>
+      <div class="cov-detail">
+        <span>Lines: <b>${c.lines}%</b></span>
+        <span>Branches: <b>${c.branches}%</b></span>
+        <span>Functions: <b>${c.functions}%</b></span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ====== DEPLOYMENT TIMELINE ======
+function initTimeline(){
+  const deploys=[
+    {time:'Mar 8, 2026 14:22 UTC',title:'WETH9 Deployed',detail:'Wrapped ETH contract deployed as base trading pair',hash:'0x3a7f...8b2c4d1e',status:'success'},
+    {time:'Mar 8, 2026 14:25 UTC',title:'FluxToken (FLUX) Deployed',detail:'ERC-20 governance token with 1B total supply, EIP-2612 permit',hash:'0x5f4a...c6b17e3d',status:'success'},
+    {time:'Mar 8, 2026 14:28 UTC',title:'FluxFactory Deployed',detail:'Factory contract with CREATE2 pool deployment, fee tier support',hash:'0x9c5b...2a8f4d1e',status:'success'},
+    {time:'Mar 8, 2026 14:32 UTC',title:'FluxPool Implementation Deployed',detail:'AMM pool with concentrated liquidity, fee collection, oracle',hash:'0x7e3d...6f2a8b5c',status:'success'},
+    {time:'Mar 8, 2026 14:35 UTC',title:'FluxSwapRouter Deployed',detail:'Multi-hop swap router with exact input/output, deadline, slippage',hash:'0x1d9e...3a7f5b4c',status:'success'},
+    {time:'Mar 8, 2026 14:40 UTC',title:'FLUX/WETH Pool Created',detail:'Initial pool created via FluxFactory.createPool() with 0.3% fee tier',hash:'0x4d1e...9c5b7a3f',status:'success'},
+    {time:'Mar 8, 2026 14:45 UTC',title:'Contract Verification',detail:'All 5 contracts verified on Sepolia Etherscan',hash:'Verified',status:'success'},
+  ];
+  document.getElementById('timeline').innerHTML=deploys.map(d=>`
+    <div class="tl-item ${d.status}">
+      <div class="tl-time">${d.time}</div>
+      <div class="tl-title">${d.title}</div>
+      <div class="tl-detail">${d.detail}</div>
+      <div class="tl-hash">${d.hash}</div>
+    </div>
+  `).join('');
+  
+  // Architecture diagram
+  document.getElementById('archDiagram').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div style="background:var(--surface3);border:2px solid var(--orange);border-radius:10px;padding:12px 24px;font-weight:700;color:var(--orange)">FluxSwapRouter</div>
+      <div style="color:var(--muted)">|</div>
+      <div style="background:var(--surface3);border:2px solid var(--purple);border-radius:10px;padding:12px 24px;font-weight:700;color:var(--purple)">FluxFactory (CREATE2)</div>
+      <div style="color:var(--muted)">|</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+        <div style="background:var(--surface3);border:2px solid var(--blue);border-radius:10px;padding:10px 16px;font-weight:700;color:var(--blue);font-size:11px">FluxPool<br><span style="font-weight:400;color:var(--muted);font-size:10px">FLUX/WETH</span></div>
+        <div style="background:var(--surface3);border:2px solid var(--blue);border-radius:10px;padding:10px 16px;font-weight:700;color:var(--blue);font-size:11px">FluxPool<br><span style="font-weight:400;color:var(--muted);font-size:10px">FLUX/USDC</span></div>
+        <div style="background:var(--surface3);border:2px dashed var(--border);border-radius:10px;padding:10px 16px;font-weight:700;color:var(--muted);font-size:11px">FluxPool<br><span style="font-weight:400;font-size:10px">Any Pair</span></div>
+      </div>
+      <div style="color:var(--muted);margin-top:8px">|</div>
+      <div style="display:flex;gap:16px">
+        <div style="background:var(--surface3);border:2px solid var(--green);border-radius:10px;padding:10px 16px;font-weight:700;color:var(--green);font-size:11px">FLUX (ERC-20)</div>
+        <div style="background:var(--surface3);border:2px solid var(--cyan);border-radius:10px;padding:10px 16px;font-weight:700;color:var(--cyan);font-size:11px">WETH9</div>
+      </div>
+    </div>
+  `;
+}
+
+// ====== INIT ======
+window.addEventListener('load',()=>{
+  initContracts();
+  initABI();
+  initCoverage();
+  initTimeline();
+});
+</script>
+</body>
+</html>
